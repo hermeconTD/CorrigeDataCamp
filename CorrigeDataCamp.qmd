@@ -11,9 +11,10 @@ En esta entrega el programa debe realizar la calificacion de la clase para los c
 
 ```{r}
 library(tidyverse)
+library(dplyr)
 ```
 
-Luego de cargar las bibliotecas
+Luego de cargar las bibliotecas averiguamos los nombres de los archivos presentes en el fichero.
 
 ```{r}
 ruta <- "../2025-26 Tractament de les dades Gr.A-T (36423)-Tarea Intermediate R(Datacamp)-3281647/"
@@ -23,7 +24,11 @@ ficheros <- list.files(
   recursive = TRUE,
   full.names = TRUE
 )
+```
 
+Separar los nombre para ser usados en el dataframe.
+
+```{r}
 Separar <- function(lista) {
   nueva_lista <- c()
   
@@ -41,4 +46,69 @@ Separar <- function(lista) {
 nombres <- Separar(ficheros)
 nombres
 
+```
+
+Ahora vamos a crear un dataframe para inicialmente revisar que estudiantes enviaron ambos el puntos.txt y certificate.pdf y luego poder usarlo para el dataframe final.
+
+```{r}
+archivos <- sapply(ficheros, function(x) {
+  partes <- strsplit(x, .Platform$file.sep)[[1]]
+  partes[length(partes)]
+})
+
+df_files <- data.frame(
+  nombre = nombres,
+  archivo = archivos,
+  stringsAsFactors = FALSE
+)
+df_files
+```
+
+usando este dataframe junto con dplyr vamos a revisar quienes entregaron exactos que son las entregas correctas, variaciones pero que tienen ambas entregas y por ultimo las fallas.
+
+```{r}
+resumen <- df_files %>%
+  group_by(nombre) %>%
+  summarise(
+    # Exactos
+    puntos_exacto = any(tolower(archivo) == "puntos.txt"),
+    certificado_exacto = any(tolower(archivo) == "certificate.pdf"),
+    
+    # Variaciones y rutas
+    ruta_puntos = first(ficheros[grepl("puntos", archivo, ignore.case = TRUE)], default = NA),
+    ruta_certificado = first(ficheros[grepl("certificate", archivo, ignore.case = TRUE)], default = NA)) %>%
+  mutate(
+    Apellidos = trimws(sapply(strsplit(nombre, ","), `[`, 1))
+  ) %>%
+  select(-nombre) %>%
+  select(Apellidos, everything())
+```
+
+Ahora vamos a dividir esto en 3 dataframes para asi poder manipularlos.
+
+Exactos:
+
+```{r}
+exactos <- resumen %>%
+  filter(puntos_exacto & certificado_exacto)
+head(exactos)
+```
+
+Variaciones:
+
+```{r}
+variaciones <- resumen %>%
+  filter(
+    !is.na(ruta_puntos) & !is.na(ruta_certificado) &
+    !(puntos_exacto & certificado_exacto)
+  )
+head(variaciones)
+```
+
+Fallas:
+
+```{r}
+fallas <- resumen %>%
+  filter(is.na(ruta_puntos) | is.na(ruta_certificado))
+head(fallas)
 ```
