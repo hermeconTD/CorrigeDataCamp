@@ -1,0 +1,44 @@
+---
+title: "CorrigeDataCamp"
+author: "Hernán Meléndez"
+format: html
+editor: visual
+---
+
+## Corrige DataCamp
+
+En esta entrega el programa debe realizar la calificacion de la clase para los cursos de DataCamp.
+
+```{r}
+library(tidyverse)
+```
+
+Luego de cargar las bibliotecas
+
+```{r}
+ruta <- "../2025-26 Tractament de les dades Gr.A-T (36423)-Tarea Intermediate R(Datacamp)-3281647/"
+
+ficheros <- list.files(
+  path = ruta,
+  recursive = TRUE,
+  full.names = TRUE
+)
+
+Separar <- function(lista) {
+  nueva_lista <- c()
+  
+  for (elemento in lista) {
+    
+    carpeta <- basename(dirname(elemento))
+    
+    temp <- strsplit(carpeta, "_")[[1]]
+    nueva_lista <- append(nueva_lista, temp[1])
+  }
+  
+  return(nueva_lista)
+}
+
+nombres <- Separar(ficheros)
+nombres
+
+```
