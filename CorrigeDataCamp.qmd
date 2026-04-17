@@ -12,6 +12,8 @@ En esta entrega el programa debe realizar la calificacion de la clase para los c
 ```{r}
 library(tidyverse)
 library(dplyr)
+library(writexl)
+library(readxl)
 ```
 
 Luego de cargar las bibliotecas averiguamos los nombres de los archivos presentes en el fichero.
@@ -91,6 +93,8 @@ Exactos:
 ```{r}
 exactos <- resumen %>%
   filter(puntos_exacto & certificado_exacto)
+# Numero de entregas exactas a la instruccion:
+nrow(exactos)
 head(exactos)
 ```
 
@@ -102,6 +106,8 @@ variaciones <- resumen %>%
     !is.na(ruta_puntos) & !is.na(ruta_certificado) &
     !(puntos_exacto & certificado_exacto)
   )
+# Numero de entregas completadas con nombres con varioaciones a la instruccion:
+nrow(variaciones)
 head(variaciones)
 ```
 
@@ -110,5 +116,74 @@ Fallas:
 ```{r}
 fallas <- resumen %>%
   filter(is.na(ruta_puntos) | is.na(ruta_certificado))
+# Numero de entregas que fallan al no tener ambos documentos segun la instruccion:
+nrow(fallas)
 head(fallas)
+```
+
+Ahora vamos a crear la funcion para leer los puntos.txt de cada persona.
+
+```{r}
+leer_puntos <- function(ruta) {
+  if (is.na(ruta)) return(NA)
+  
+  texto <- readLines(ruta, warn = FALSE)
+  
+  if (length(texto) == 0) return(NA)
+  
+  as.numeric(gsub("[^0-9.]", "", texto[1]))
+}
+
+```
+
+creamos evalua_df para la primera entrega usando el dataframe resumen.
+
+```{r}
+evalua_df <- resumen %>%
+  mutate(
+    puntos = sapply(ruta_puntos, leer_puntos),
+    NomFile = sapply(ruta_puntos, function(x) {
+      if (is.na(x)) return(NA)
+      partes <- strsplit(x, .Platform$file.sep)[[1]]
+      partes[length(partes)]
+    }),
+    PuntosTexto = sapply(ruta_puntos, function(x) {
+      if (is.na(x)) return(NA)
+      texto <- readLines(x, warn = FALSE)
+      if (length(texto) == 0) return(NA)
+      texto[1]
+    })
+  ) %>%
+  select(Apellidos, puntos, NomFile, PuntosTexto)
+nrow(evalua_df)
+head(evalua_df)
+```
+
+Exportamos el dataframe a Excel.
+
+```{r}
+write_xlsx(evalua_df, "NotasRIntermedio.xlsx")
+```
+
+Cargamos los alumnos matriculados.\
+
+```{r}
+alumnos_df <- read_excel("../AlumnosTD25_26.xlsx")
+nrow(alumnos_df)
+head(alumnos_df)
+```
+
+Unimos evalua_df y alumnos_df.
+
+```{r}
+final_df <- alumnos_df %>%
+  left_join(evalua_df, by = c("Apellido(s)" = "Apellidos"))
+nrow(final_df)
+head(final_df)
+```
+
+Exportamos a Excel el dataframe final luego de juntarlo.
+
+```{r}
+write_xlsx(final_df, "AlumnosNotas.xlsx")
 ```
